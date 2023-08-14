@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "128887085635",
+    "project_id": "travelappflutter-6090f",
+    "storage_bucket": "travelappflutter-6090f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:128887085635:android:50bbf92fe36eb2a85c12f6",
+        "android_client_info": {
+          "package_name": "com.example.travel_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "128887085635-417l1ahp4u4d4a4c7ijntso6m6o57m0t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFhSYQyBHzZ3Zh7-vvaGM5kVOn6YrdCfA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "128887085635-417l1ahp4u4d4a4c7ijntso6m6o57m0t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

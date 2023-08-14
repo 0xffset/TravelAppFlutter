@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:travel_app/model/map_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -14,6 +17,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:google_api_headers/google_api_headers.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:travel_app/pages/save_place.dart';
+
+import '../modules/classes.dart';
+import '../modules/database.dart';
 
 class FindFriends extends StatefulWidget {
   const FindFriends({Key? key}) : super(key: key);
@@ -30,7 +37,10 @@ class _FindFriendsState extends State<FindFriends> {
     target: LatLng(37.42796133580664, -122.085749655962),
     zoom: 14.4746,
   );
+  static User user = FirebaseAuth.instance.currentUser!;
 
+  List<Map> _list = [];
+  DataBaseHelper database = DataBaseHelper();
   Set<Marker> _markers = {};
   Set<Marker> markersList = {};
   late String Lat = "";
@@ -58,53 +68,30 @@ class _FindFriendsState extends State<FindFriends> {
     return await Geolocator.getCurrentPosition();
   }
 
-  final List<dynamic> _contacts = [
-    {
-      "name": "Me",
-      "position": const LatLng(37.42796133580664, -122.085749655962),
-      "marker": 'assets/markers/marker-1.png',
-      "image": 'assets/images/avatar-1.png',
-    },
-    {
-      "name": "Samantha",
-      "position": const LatLng(37.42484642575639, -122.08309359848501),
-      "marker": 'assets/markers/marker-2.png',
-      "image": 'assets/images/avatar-2.png',
-    },
-    {
-      "name": "Malte",
-      "position": const LatLng(37.42381625902441, -122.0928531512618),
-      "marker": 'assets/markers/marker-3.png',
-      "image": 'assets/images/avatar-3.png',
-    },
-    {
-      "name": "Julia",
-      "position": const LatLng(37.41994095849639, -122.08159055560827),
-      "marker": 'assets/markers/marker-4.png',
-      "image": 'assets/images/avatar-4.png',
-    },
-    {
-      "name": "Tim",
-      "position": const LatLng(37.413175077529935, -122.10101041942836),
-      "marker": 'assets/markers/marker-5.png',
-      "image": 'assets/images/avatar-5.png',
-    },
-    {
-      "name": "Sara",
-      "position": const LatLng(37.419013242401576, -122.11134664714336),
-      "marker": 'assets/markers/marker-6.png',
-      "image": 'assets/images/avatar-6.png',
-    },
-    {
-      "name": "Ronaldo",
-      "position": const LatLng(37.40260962243491, -122.0976958796382),
-      "marker": 'assets/markers/marker-7.png',
-      "image": 'assets/images/avatar-7.png',
-    },
-  ];
+  final List<dynamic> _data = [];
+
+  Future<void> getData() async {
+    await Provider.of<PlaceNotifier>(context, listen: false)
+        .fetchPlaces(user!.uid);
+    final items = Provider.of<PlaceNotifier>(context, listen: false).items;
+    print(items);
+    for (var element in items) {
+      _data.add({
+        "id": element.id,
+        "name": element.title,
+        "description": element.description,
+        "position": LatLng(
+            double.parse(element.latitude), double.parse(element.longitude)),
+        "marker": 'assets/markers/marker-7.png',
+        "image": element.image.path,
+      });
+    }
+    setState(() {});
+  }
 
   @override
   void initState() {
+    getData();
     super.initState();
   }
 
@@ -120,67 +107,100 @@ class _FindFriendsState extends State<FindFriends> {
             markers: _markers,
             mapType: MapType.normal,
             myLocationEnabled: true,
+            onLongPress: (locs) {
+              Navigator.push(context, MaterialPageRoute(builder: (context) {
+                return ListenableProvider<PlaceNotifier>(
+                  create: (_) => PlaceNotifier(),
+                  builder: (context, child) {
+                    return SavePlacePage(
+                        LastContext: context,
+                        Lat: locs.latitude,
+                        Long: locs.longitude);
+                  },
+                );
+              })).then((value) {
+                setState(() {
+                  getData();
+                });
+              });
+            },
             onMapCreated: (GoogleMapController controller) {
               _googleMapController.complete(controller);
               controller.setMapStyle(MapStyle().aubergine);
             },
           ),
-          ElevatedButton(
-              onPressed: _handlePressButton,
-              child: const Text("Search Places")),
-          Positioned(
-            bottom: 50,
-            left: 20,
-            right: 20,
-            child: Container(
-                width: MediaQuery.of(context).size.width,
-                height: 120,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20)),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _contacts.length,
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () async {
-                        final GoogleMapController controller =
-                            await _googleMapController.future;
-                        controller.moveCamera(CameraUpdate.newLatLng(
-                            _contacts[index]["position"]));
-                        setState(() {});
-                      },
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        margin: const EdgeInsets.only(right: 10),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(
-                              _contacts[index]['image'],
-                              width: 60,
-                            ),
-                            const SizedBox(
-                              height: 10,
-                            ),
-                            Text(
-                              _contacts[index]["name"],
-                              style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600),
-                            )
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                )),
-          ),
+         Row(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+                  MaterialButton(
+                 onPressed: _handlePressButton,
+                 color: Colors.deepPurple[200],
+
+                 child:  Text("Search Places"))
+           ],
+         ),
+         Positioned(
+
+           left: 20,
+           right: 20,
+           top: 70,
+
+           child: Container(
+               width: MediaQuery.of(context).size.height,
+               height: 100,
+               decoration: BoxDecoration(
+                   color: Colors.white,
+                   borderRadius: BorderRadius.circular(20)),
+               child: ListView.builder(
+                 scrollDirection: Axis.horizontal,
+                 itemCount: _data.length,
+                 itemBuilder: (context, index) {
+                   return GestureDetector(
+                     onTap: () async {
+                       final GoogleMapController controller =
+                       await _googleMapController.future;
+                       controller.moveCamera(
+                           CameraUpdate.newLatLng(_data[index]["position"]));
+                       setState(() {});
+                     },
+                     child: Container(
+                       width: 100,
+                       height: 100,
+                       margin: const EdgeInsets.only(right: 10),
+                       child: Column(
+                         mainAxisAlignment: MainAxisAlignment.center,
+                         children: [
+                           ClipRRect(
+                             borderRadius: BorderRadius.circular(100),
+                             child: Image.file(
+                               File(
+                                 _data[index]['image'],
+                               ),
+                               width: 60,
+                               height: 60,
+                             ),
+                           ),
+                           const SizedBox(
+                             height: 10,
+                           ),
+                           Text(
+                             _data[index]["name"],
+                             style: const TextStyle(
+                                 color: Colors.black,
+                                 fontWeight: FontWeight.w600),
+                           )
+                         ],
+                       ),
+                     ),
+                   );
+                 },
+               )),
+         ) ,
         ],
       ),
       floatingActionButton: FloatingActionButton(
 
+        backgroundColor: Colors.deepPurple[200],
         onPressed: () async {
           _getCurrentLocation().then((value) async {
             _markers.add(Marker(
@@ -196,7 +216,6 @@ class _FindFriendsState extends State<FindFriends> {
             setState(() {});
           });
         },
-
         child: const Icon(Icons.location_on),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startDocked,
@@ -206,15 +225,14 @@ class _FindFriendsState extends State<FindFriends> {
   createMarkers(BuildContext context) {
     Marker marker;
 
-    _contacts.forEach((contact) async {
+    _data.forEach((contact) async {
       marker = Marker(
-        markerId: MarkerId(contact['name']),
+        markerId: MarkerId(contact['id']),
         position: contact['position'],
-        icon: await _getAssetIcon(context, contact['marker'])
-            .then((value) => value),
+        icon: BitmapDescriptor.defaultMarker,
         infoWindow: InfoWindow(
           title: contact['name'],
-          snippet: 'Street 6 . 2min ago',
+          snippet: contact['description'],
         ),
       );
 
